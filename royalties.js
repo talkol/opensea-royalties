@@ -17,17 +17,20 @@ const ethDecimalsNum = new BigNumber(`1e18`);
 async function main() {
   // get all transfer events
   const transfers = await NftCollection.getPastEvents('Transfer', {
-    fromBlock: 13110000, // TODO: change the block numbers here to get the block range you want to check
-    toBlock: 13110000+1000,
+    fromBlock: 13110000, // TODO: change the block numbers here to get the Ethereum block range you want to check (see https://etherscan.io/blocks)
+    toBlock: 13110000+1000, // TODO: if the range is too large, the alchemy API calls may fail, run multiple times with smaller ranges in this case 
   });
   // print csv header
-  process.stdout.write('Block,Transaction Hash,Transaction Link,Seller Address,Buyer Address,OpenSea ETH Sale Price\n');
+  process.stdout.write('Block,Timestamp,Transaction Hash,Transaction Link,Seller Address,Buyer Address,OpenSea ETH Sale Price\n');
   // go over each transfer
   for (const transfer of transfers) {
     const txHash = transfer.transactionHash;
-    process.stdout.write(`${transfer.blockNumber},${txHash},https://etherscan.io/tx/${txHash}#eventlog,${transfer.returnValues.from},${transfer.returnValues.to},`);
     // get the transaction with all logs (events)
     const tx = await web3.eth.getTransactionReceipt(txHash);
+    // get the block header for the timestamp
+    const block = await web3.eth.getBlock(transfer.blockNumber);
+    // output
+    process.stdout.write(`${transfer.blockNumber},${new Date(block.timestamp*1000).toISOString()},${txHash},https://etherscan.io/tx/${txHash}#eventlog,${transfer.returnValues.from},${transfer.returnValues.to},`);
     // go over all logs
     for (const log of tx.logs) {
       if (log.address.toLowerCase() == OpenSeaAddress.toLowerCase()) {
